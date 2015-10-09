@@ -21,20 +21,21 @@ type Connecter interface {
 		headers map[string]string) (*http.Request, error)
 
 	ExecuteHTTPRequest(method, path string, body []byte,
-		headers map[string]string,
-		output interface{},
-		customError interface{}) (int, error)
+		headers map[string]string) (int, error)
 }
 
 type Connection struct {
-	name     string
-	host     string
-	fallback Connecter
+	name        string
+	host        string
+	output      interface{}
+	customError interface{}
+	fallback    Connecter
 }
 
-func NewConection(name, host string, fallback Connecter) *Connection {
+func NewConection(name, host string, output interface{},
+	customError interface{}, fallback Connecter) *Connection {
 
-	return &Connection{name, host, fallback}
+	return &Connection{name, host, output, customError, fallback}
 }
 
 func (connection Connection) GetName() string {
@@ -45,22 +46,20 @@ func (connection Connection) GetName() string {
 func (connection Connection) CreateHTTPRequest(method, path string,
 	body []byte, headers map[string]string) (*http.Request, error) {
 
-	req, err :=
-		http.NewRequest(method, connection.host+"/"+path, bytes.NewBuffer(body))
+	request, err :=
+		http.NewRequest(method, connection.host+"/"+path, bytes.NewBuffer(body)) // todo: Cater for GET, no body...
 	if err != nil {
 		return nil, err
 	}
 
 	for key := range headers {
-		req.Header.Add(key, headers[key])
+		request.Header.Add(key, headers[key])
 	}
-	return req, nil
+	return request, nil
 }
 
 func (connection Connection) ExecuteHTTPRequest(method, path string,
-	body []byte, headers map[string]string,
-	output interface{},
-	customError interface{}) (int, error) {
+	body []byte, headers map[string]string) (int, error) {
 
 	client := &http.Client{}
 
@@ -72,7 +71,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	if err != nil {
 		if connection.fallback != nil {
 			statusCode, err :=
-				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
+				connection.fallback.ExecuteHTTPRequest(method, path, body, headers)
 			if statusCode < 200 || statusCode > 299 {
 				return statusCode, err
 			}
@@ -89,7 +88,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	if err != nil {
 		if connection.fallback != nil {
 			statusCode, err :=
-				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
+				connection.fallback.ExecuteHTTPRequest(method, path, body, headers)
 			if statusCode < 200 || statusCode > 299 {
 				return statusCode, err
 			}
@@ -111,7 +110,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	if resp.StatusCode == 404 {
 		if connection.fallback != nil {
 			statusCode, err :=
-				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
+				connection.fallback.ExecuteHTTPRequest(method, path, body, headers)
 			if statusCode < 200 || statusCode > 299 {
 				return statusCode, err
 			}
@@ -121,7 +120,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if connection.fallback != nil {
 			statusCode, err :=
-				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
+				connection.fallback.ExecuteHTTPRequest(method, path, body, headers)
 			if statusCode < 200 || statusCode > 299 {
 				return statusCode, err
 			}
@@ -130,7 +129,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 
 		dec := json.NewDecoder(resp.Body)
 
-		err := dec.Decode(customError)
+		err := dec.Decode(connection.customError)
 		if err != nil {
 			return resp.StatusCode, errors.New("Unable to parse custom error.")
 		}
@@ -138,7 +137,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	} else {
 		dec := json.NewDecoder(resp.Body)
 
-		err := dec.Decode(output)
+		err := dec.Decode(connection.output)
 		if err != nil {
 			return resp.StatusCode, errors.New("Unable to parse custom error.")
 		}
