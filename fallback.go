@@ -33,13 +33,10 @@ type Connecter interface {
 // Consuming clients can utilise this class directly, as per the examples
 // provided, or provide custom implementations derived from Connecter.
 type Connection struct {
-	// The name used to describe the Connection.
-	Name string
-	// The Host URI segment excluding other segments such as query string.
-	Host string
-	// A custom struct that represents a deserialised object returned as result
+	Name   string      // The name used to describe the Connection.
+	Host   string      // The Host URI segment excluding other segments such as query string.
+	Output interface{} // A custom struct that represents a deserialised object returned as result
 	// of a successful HTTP request.
-	Output      interface{}
 	CustomError interface{}
 	Fallback    Connecter
 }
