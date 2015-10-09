@@ -71,14 +71,14 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	request, err := connection.CreateHTTPRequest(method, path, body, headers)
 	if err != nil {
 		if connection.fallback != nil {
-			ok, statusCode, err :=
+			statusCode, err :=
 				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
-			if !ok {
-				return false, statusCode, err
+			if statusCode < 200 || statusCode > 299 {
+				return statusCode, err
 			}
-			return true, statusCode, nil
+			return statusCode, nil
 		}
-		return false, 0, err
+		return 400, err // This error will occur if the URI is malformed or otherwise invalid.
 	}
 
 	// Attempt to execute the request. Should this fail, recursively fall back
@@ -88,16 +88,15 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	resp, err := client.Do(request)
 	if err != nil {
 		if connection.fallback != nil {
-			ok, statusCode, err :=
+			statusCode, err :=
 				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
-			if !ok {
-				return false, statusCode, err
+			if statusCode < 200 || statusCode > 299 {
+				return statusCode, err
 			}
-			return true, statusCode, nil
+			return statusCode, nil
 		}
-		return false, 0, err
+		return 503, err // This error will occur if the URI is unreachable.
 	}
-
 	defer resp.Body.Close()
 
 	// Handle all potential HTTP responses. At this point, the request has
@@ -111,37 +110,38 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 
 	if resp.StatusCode == 404 {
 		if connection.fallback != nil {
-			ok, statusCode, err :=
+			statusCode, err :=
 				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
-			if !ok {
-				return false, statusCode, err
+			if statusCode < 200 || statusCode > 299 {
+				return statusCode, err
 			}
-			return true, statusCode, nil
+			return statusCode, nil
 		}
-		return false, 404, nil
-	} else if resp.StatusCode < 200 || resp.StatusCode > 202 {
+		return 404, nil
+	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if connection.fallback != nil {
-			ok, statusCode, err :=
+			statusCode, err :=
 				connection.fallback.ExecuteHTTPRequest(method, path, body, headers, output, customError)
-			if !ok {
-				return false, statusCode, err
+			if statusCode < 200 || statusCode > 299 {
+				return statusCode, err
 			}
-			return true, statusCode, nil
+			return statusCode, nil
 		}
+
 		dec := json.NewDecoder(resp.Body)
 
 		err := dec.Decode(customError)
 		if err != nil {
-			return false, resp.StatusCode, errors.New("Unable to parse custom error.")
+			return resp.StatusCode, errors.New("Unable to parse custom error.")
 		}
-		return false, resp.StatusCode, nil
+		return resp.StatusCode, nil
 	} else {
 		dec := json.NewDecoder(resp.Body)
 
 		err := dec.Decode(output)
 		if err != nil {
-			return false, resp.StatusCode, errors.New("Unable to parse custom error.")
+			return resp.StatusCode, errors.New("Unable to parse custom error.")
 		}
-		return true, resp.StatusCode, nil
+		return resp.StatusCode, nil
 	}
 }
