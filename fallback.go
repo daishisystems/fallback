@@ -32,7 +32,7 @@ type Connection struct {
 	fallback    Connecter
 }
 
-func NewConection(name, host string, output interface{},
+func NewConnection(name, host string, output interface{},
 	customError interface{}, fallback Connecter) *Connection {
 
 	return &Connection{name, host, output, customError, fallback}
@@ -45,8 +45,6 @@ func (connection Connection) GetName() string {
 
 func (connection Connection) CreateHTTPRequest(method, path string,
 	body []byte, headers map[string]string) (*http.Request, error) {
-
-	// todo: Check for invalid method names
 
 	var request *http.Request
 	var err error
@@ -72,10 +70,6 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 
 	client := &http.Client{}
 
-	// Attempt to construct an initial connection. Should this fail,
-	// recursively fall back to each underlying connection mechanism until a
-	// successful attempt is established, or all attempts fail.
-
 	request, err := connection.CreateHTTPRequest(method, path, body, headers)
 	if err != nil {
 		if connection.fallback != nil {
@@ -88,10 +82,6 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 		}
 		return 400, err // This error will occur if the URI is malformed or otherwise invalid.
 	}
-
-	// Attempt to execute the request. Should this fail, recursively fall back
-	// to each underlying connection mechanism until a successful attempt is
-	// established, or all attempts fail.
 
 	resp, err := client.Do(request)
 	if err != nil {
@@ -106,15 +96,6 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 		return 503, err // This error will occur if the URI is unreachable.
 	}
 	defer resp.Body.Close()
-
-	// Handle all potential HTTP responses. At this point, the request has
-	// executed and will return a valid HTTP status code. Successful HTTP
-	// status codes (200 – 202) will yield the necessary payload from Monex,
-	// in JSON format. Assuming valid format, this payload will be parsed to
-	// output, and returned. Unsuccessful HTTP status codes will cause
-	// fall-back; the process flow will recursively fall back to each
-	// underlying connection mechanism until a successful attempt is
-	// established, or all attempts fail.
 
 	if resp.StatusCode == 404 {
 		if connection.fallback != nil {
