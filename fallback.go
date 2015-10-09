@@ -46,8 +46,17 @@ func (connection Connection) GetName() string {
 func (connection Connection) CreateHTTPRequest(method, path string,
 	body []byte, headers map[string]string) (*http.Request, error) {
 
-	request, err :=
-		http.NewRequest(method, connection.host+"/"+path, bytes.NewBuffer(body)) // todo: Cater for GET, no body...
+	// todo: Check for invalid method names
+
+	var request *http.Request
+	var err error
+
+	if body == nil {
+		request, err = http.NewRequest(method, connection.host+"/"+path, nil)
+	} else {
+		request, err = http.NewRequest(method, connection.host+"/"+path, bytes.NewBuffer(body))
+	}
+
 	if err != nil {
 		return nil, err
 	}
