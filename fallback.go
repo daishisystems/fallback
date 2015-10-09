@@ -1,14 +1,10 @@
 // Package fallback provides an enhanced degree of redundancy to HTTP requests
-// by introducing a
-// <a href="https://en.wikipedia.org/wiki/Chain-of-responsibility_pattern">
-// chain of responsibility</a>,
-// consisting of a series of fallback
+// by introducing a chain of responsibility, consisting of a series of fallback
 // HTTP requests, to augment an initial HTTP request. Should the initial HTTP
-// request fail, the next fallback HTTP request in the chain will execute.
-//
-// Any number of fallback HTTP requests can be chained sequentially. Redundancy
-// is achieved by executing each fallback HTTP request in a recursive manner
-// until one of the requests succeeds, or all requests fail.
+// request fail, the next fallback HTTP request in the chain will execute. Any
+// number of fallback HTTP requests can be chained sequentially. Redundancy is
+// achieved by executing each fallback HTTP request in a recursive manner until
+// one of the requests succeeds, or all requests fail.
 package fallback
 
 import (
