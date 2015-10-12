@@ -30,15 +30,15 @@ type Connecter interface {
 
 // Connection represents a Concrete Handler implementation in the Chain of
 // Responsibility that consists of a series of fallback HTTP requests.
-// Consuming clients can utilise this class directly, as per the examples
-// provided, or provide custom implementations derived from Connecter.
+// Consuming clients can utilise this class directly, or provide custom
+// implementations derived from Connecter.
 type Connection struct {
 	Name   string      // The name used to describe the Connection.
 	Host   string      // The Host URI segment excluding other segments such as query string.
 	Output interface{} // A custom struct that represents a deserialised object returned as result
 	// of a successful HTTP request.
 	CustomError interface{}
-	Fallback    Connecter
+	Fallback    Connecter //todo: GET RID OF THESE COMMENTS AND FORMAT THEM IN THE STRUCT DOC AS UL,LI, ETC.
 }
 
 // NewConnection returns a new Connection instance based on the supplied
@@ -55,6 +55,12 @@ func (connection Connection) GetName() string {
 	return connection.Name
 }
 
+// CreateHTTPRequest instantiates a http.Request. method refers to the HTTP
+// method; e.g., POST, GET, etc. path refers to the latter segment of a URL;
+// e.g., /api/customers/john. Notice that neither host-name nor scheme are
+// included. body encapsulates the POST body, if applicable. headers refers
+// to any HTTP headers applicable to the HTTP request. The method returns a
+// pointer to the constructed http.Request, or an error, if the URL is invalid.
 func (connection Connection) CreateHTTPRequest(method, path string,
 	body []byte, headers map[string]string) (*http.Request, error) {
 
@@ -77,6 +83,33 @@ func (connection Connection) CreateHTTPRequest(method, path string,
 	return request, nil
 }
 
+// ExecuteHTTPRequest represents a Chain of Responsibility consisting of a
+// series of fallback HTTP requests, to augment an initial HTTP request. Should
+// the initial HTTP request fail, the next fallback HTTP request in the chain
+// will execute. Any number of fallback HTTP requests can be chained sequentially.
+//
+// ExecuteHTTPRequest initially attempts to construct a HTTP connection. Should
+// this fail, the process flow shifts to any fallback method applied to
+// Connection. If no fallback method is specified, the method returns.
+//
+// Unreachable URIs will yield a HTTP 503 response. Invalid URIs will yield a
+// 404 response. IT is assumed these response types will by default yield a
+// Content-Type of “text/plain”, and will therefore not contain a HTTP Response
+// Body to parse.
+//
+// It is assumed that failed HTTP requests that yield HTTP status codes other
+// than 404 or 503 will contain a HTTP Response Body suitable for parsing, and
+// applicable to Connection.CustomError in terms of deserialization. If no
+// fallback method is specified, the HTTP Response Body will be deserialised to
+// Connection.CustomError, and the method will return the HTTP status code.
+// Otherwise, fall-back will occur; the process flow will recursively fall back
+// to each underlying fallback Connection mechanism until a successful attempt
+// is established, or all attempts fail.
+//
+// It is assumed that successful HTTP requests will contain a HTTP Response
+// Body suitable for parsing and applicable to Connection.Output. The HTTP
+// Response Body will be deserialised to Connection.Output, and the method will
+// return the HTTP status code.
 func (connection Connection) ExecuteHTTPRequest(method, path string,
 	body []byte, headers map[string]string) (int, error) {
 
@@ -87,12 +120,10 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
-			if statusCode < 200 || statusCode > 299 {
-				return statusCode, err
-			}
-			return statusCode, nil
+
+			return statusCode, err
 		}
-		return 400, err // This error will occur if the URI is malformed or otherwise invalid.
+		return 400, err
 	}
 
 	resp, err := client.Do(request)
@@ -100,12 +131,10 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
-			if statusCode < 200 || statusCode > 299 {
-				return statusCode, err
-			}
-			return statusCode, nil
+
+			return statusCode, err
 		}
-		return 503, err // This error will occur if the URI is unreachable.
+		return 503, err
 	}
 	defer resp.Body.Close()
 
@@ -113,36 +142,32 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
-			if statusCode < 200 || statusCode > 299 {
-				return statusCode, err
-			}
-			return statusCode, nil
+
+			return statusCode, err
 		}
 		return 404, nil
 	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
-			if statusCode < 200 || statusCode > 299 {
-				return statusCode, err
-			}
-			return statusCode, nil
+
+			return statusCode, err
 		}
 
 		dec := json.NewDecoder(resp.Body)
-
 		err := dec.Decode(connection.CustomError)
 		if err != nil {
 			return resp.StatusCode, errors.New("Unable to parse custom error.")
 		}
+
 		return resp.StatusCode, nil
 	} else {
 		dec := json.NewDecoder(resp.Body)
-
 		err := dec.Decode(connection.Output)
 		if err != nil {
 			return resp.StatusCode, errors.New("Unable to parse custom error.")
 		}
+
 		return resp.StatusCode, nil
 	}
 }
