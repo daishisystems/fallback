@@ -101,32 +101,33 @@ func (connection Connection) createHTTPRequest(method string, body []byte,
 }
 
 // ExecuteHTTPRequest represents a Chain of Responsibility consisting of a
-// series of fallback HTTP requests, to augment an initial HTTP request. Should
-// the initial HTTP request fail, the next fallback HTTP request in the chain
-// will execute. Any number of fallback HTTP requests can be chained sequentially.
-//
-// ExecuteHTTPRequest initially attempts to construct a HTTP connection. Should
-// this fail, the process flow shifts to any fallback method applied to
-// Connection. If no fallback method is specified, the method returns.
+// series of fallback HTTP requests that augment an initial HTTP request.
+// Should the initial HTTP request fail, the next fallback HTTP request in the
+// chain will execute. Any number of fallback HTTP requests can be chained
+// sequentially. ExecuteHTTPRequest initially attempts to construct a HTTP
+// connection. Should this fail, the process flow shifts to any fallback method
+// applied to Connection. If no fallback method is specified, the method returns.
 //
 // Unreachable URIs will yield a HTTP 503 response. Invalid URIs will yield a
-// 404 response. IT is assumed these response types will by default yield a
-// Content-Type of “text/plain”, and will therefore not contain a HTTP Response
-// Body to parse.
-//
-// It is assumed that failed HTTP requests that yield HTTP status codes other
-// than 404 or 503 will contain a HTTP Response Body suitable for parsing, and
-// applicable to Connection.CustomError in terms of deserialization. If no
-// fallback method is specified, the HTTP Response Body will be deserialised to
-// Connection.CustomError, and the method will return the HTTP status code.
-// Otherwise, fall-back will occur; the process flow will recursively fall back
-// to each underlying fallback Connection mechanism until a successful attempt
-// is established, or all attempts fail.
+// HTTP 400 response. Neither response will yield a response body.
 //
 // It is assumed that successful HTTP requests will contain a HTTP Response
 // Body suitable for parsing and applicable to Connection.Output. The HTTP
 // Response Body will be deserialised to Connection.Output, and the method will
-// return the HTTP status code.
+// return the HTTP status code in such cases. If the HTTP Response Body is not
+// set, or cannot be deserialised to Connection.Output, an error is returned
+// along with the HTTP status code.
+//
+// It is assumed that failed HTTP requests that yield HTTP status codes other
+// than 400 or 503 will contain a HTTP Response Body suitable for parsing, and
+// applicable to Connection.CustomError in terms of deserialization. If no
+// fallback method is specified, the HTTP Response Body will be deserialised to
+// Connection.CustomError, and the method will return the HTTP status code.
+// Otherwise, fallback will occur; the process flow will recursively fall back
+// to each underlying fallback Connection mechanism until a successful attempt
+// is established, or all attempts fail. If the HTTP Response Body is not set,
+// or cannot be deserialised to Connection.CustomError, an error is returned
+// along with the HTTP status code.
 func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
 	headers map[string]string) (int, error) {
 
