@@ -1,10 +1,11 @@
 // Package fallback provides an enhanced degree of redundancy to HTTP requests
 // by introducing a Chain of Responsibility, consisting of a series of fallback
 // HTTP requests, to augment an initial HTTP request. Should the initial HTTP
-// request fail, the next fallback HTTP request in the chain will execute. Any
-// number of fallback HTTP requests can be chained sequentially. Redundancy is
-// achieved by executing each fallback HTTP request in a recursive manner until
-// one of the requests succeeds, or all requests fail.
+// request fail, the next fallback HTTP request in the chain will execute.
+//
+// Any number of fallback HTTP requests can be chained sequentially. Redundancy
+// is achieved by executing each fallback HTTP request in a recursive manner
+// until one of the requests succeeds, or all requests fail.
 package fallback
 
 import (
@@ -32,13 +33,26 @@ type Connecter interface {
 // Responsibility that consists of a series of fallback HTTP requests.
 // Consuming clients can utilise this class directly, or provide custom
 // implementations derived from Connecter.
+//
+// Name: The name used to describe the Connection.
+//
+// Host: he Host URI segment excluding other segments such as query string.
+//
+// Output: A custom struct that represents a deserialised object returned as
+// result of a successful HTTP request.
+//
+// CustomError: A custom struct that represents a deserialised object returned
+// as result of an unsuccessful HTTP request.
+//
+// Fallback: The next link in the Chain of Responsibility. Fallback represents
+// an underlying HTTP request that will be invoked in the event failure during
+// execution of this HTTP request.
 type Connection struct {
-	Name   string      // The name used to describe the Connection.
-	Host   string      // The Host URI segment excluding other segments such as query string.
-	Output interface{} // A custom struct that represents a deserialised object returned as result
-	// of a successful HTTP request.
+	Name        string
+	Host        string
+	Output      interface{}
 	CustomError interface{}
-	Fallback    Connecter //todo: GET RID OF THESE COMMENTS AND FORMAT THEM IN THE STRUCT DOC AS UL,LI, ETC.
+	Fallback    Connecter
 }
 
 // NewConnection returns a new Connection instance based on the supplied
@@ -56,11 +70,17 @@ func (connection Connection) GetName() string {
 }
 
 // CreateHTTPRequest instantiates a http.Request. method refers to the HTTP
-// method; e.g., POST, GET, etc. path refers to the latter segment of a URL;
-// e.g., /api/customers/john. Notice that neither host-name nor scheme are
-// included. body encapsulates the POST body, if applicable. headers refers
-// to any HTTP headers applicable to the HTTP request. The method returns a
-// pointer to the constructed http.Request, or an error, if the URL is invalid.
+// method; e.g., POST, GET, etc.
+//
+// path refers to the latter segment of a URL; e.g., /api/customers/john.
+// Notice that neither host-name nor scheme are included.
+//
+// body encapsulates the POST body, if applicable.
+//
+// headers refers to any HTTP headers applicable to the HTTP request.
+//
+// The method returns a pointer to the constructed http.Request, or an error,
+// if the URL is invalid.
 func (connection Connection) CreateHTTPRequest(method, path string,
 	body []byte, headers map[string]string) (*http.Request, error) {
 
