@@ -45,8 +45,8 @@ type Connecter interface {
 // as result of an unsuccessful HTTP request
 //
 // Fallback: The next link in the Chain of Responsibility. Fallback represents
-// an underlying HTTP request that will be invoked in the event failure during
-// execution of this HTTP request
+// an underlying HTTP request that will be invoked in the event of failure
+// during execution of this HTTP request
 type Connection struct {
 	Name        string
 	Method      string
@@ -58,7 +58,7 @@ type Connection struct {
 	Fallback    Connecter
 }
 
-// NewConnection returns a new Connection instance based on the supplied
+// NewConnection returns a new Connection instance based on the specified
 // metadata pertaining to Connection.
 func NewConnection(name, method, path string, body []byte,
 	headers map[string]string, output interface{}, customError interface{},
