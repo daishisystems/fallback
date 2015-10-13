@@ -1,7 +1,9 @@
-// Package fallback provides an enhanced degree of redundancy to HTTP requests
-// by introducing a Chain of Responsibility, consisting of a series of fallback
-// HTTP requests, to augment an initial HTTP request. Should the initial HTTP
-// request fail, the next fallback HTTP request in the chain will execute.
+// Package fallback enhances the durability of your API by automatically
+// recovering from connectivity failure. It achieves this by providing an
+// enhanced degree of redundancy to HTTP requests, introducing a Chain of
+// Responsibility, consisting of a series of fallback HTTP requests designed
+// to augment an initial HTTP request. Should the initial HTTP request fail,
+// the next fallback HTTP request in the chain will execute.
 //
 // Any number of fallback HTTP requests can be chained sequentially. Redundancy
 // is achieved by executing each fallback HTTP request in a recursive manner
