@@ -19,7 +19,7 @@ func TestSingleHTTPRequest(t *testing.T) {
 	basicResponse := &BasicResponse{}
 	basicError := &BasicError{}
 
-	conn := NewConnection("HTTP", "http://demo7227109.mockable.io/get-data", basicResponse, basicError, nil)
+	conn := NewConnection("HTTP", "http://demo7227109.mockable.io/get-basic", basicResponse, basicError, nil)
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
