@@ -4,3 +4,4 @@
 [![godoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/daishisystems/fallback)
 
 *Package fallback provides an enhanced degree of redundancy to HTTP requests by introducing a chain of responsibility, consisting of a series of fallback HTTP requests.*
+![Icon](https://dl.dropboxusercontent.com/u/26042707/Fallback_XS.jpg)
