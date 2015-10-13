@@ -22,10 +22,7 @@ import (
 type Connecter interface {
 	GetName() string
 
-	CreateHTTPRequest(method, path string, body []byte,
-		headers map[string]string) (*http.Request, error)
-
-	ExecuteHTTPRequest(method, path string, body []byte,
+	ExecuteHTTPRequest(method string, body []byte,
 		headers map[string]string) (int, error)
 }
 
@@ -36,7 +33,7 @@ type Connecter interface {
 //
 // Name: The name used to describe the Connection.
 //
-// Host: he Host URI segment excluding other segments such as query string.
+// Path: The HTTP URI
 //
 // Output: A custom struct that represents a deserialised object returned as
 // result of a successful HTTP request.
@@ -49,7 +46,7 @@ type Connecter interface {
 // execution of this HTTP request.
 type Connection struct {
 	Name        string
-	Host        string
+	Path        string
 	Output      interface{}
 	CustomError interface{}
 	Fallback    Connecter
@@ -57,13 +54,14 @@ type Connection struct {
 
 // NewConnection returns a new Connection instance based on the supplied
 // metadata pertaining to Connection.
-func NewConnection(name, host string, output interface{},
+func NewConnection(name, path string, output interface{},
 	customError interface{}, fallback Connecter) *Connection {
 
-	return &Connection{name, host, output, customError, fallback}
+	return &Connection{name, path, output, customError, fallback}
 }
 
-// GetName returns the Connection name.
+// GetName returns the Connection name. This method is useful for logging HTTP
+// requests in the chain.
 func (connection Connection) GetName() string {
 
 	return connection.Name
@@ -72,8 +70,7 @@ func (connection Connection) GetName() string {
 // CreateHTTPRequest instantiates a http.Request. method refers to the HTTP
 // method; e.g., POST, GET, etc.
 //
-// path refers to the latter segment of a URL; e.g., /api/customers/john.
-// Notice that neither host-name nor scheme are included.
+// path refers to the HTTP URI.
 //
 // body encapsulates the POST body, if applicable.
 //
@@ -81,16 +78,16 @@ func (connection Connection) GetName() string {
 //
 // The method returns a pointer to the constructed http.Request, or an error,
 // if the URL is invalid.
-func (connection Connection) CreateHTTPRequest(method, path string,
-	body []byte, headers map[string]string) (*http.Request, error) {
+func (connection Connection) createHTTPRequest(method string, body []byte,
+	headers map[string]string) (*http.Request, error) {
 
 	var request *http.Request
 	var err error
 
 	if body == nil {
-		request, err = http.NewRequest(method, connection.Host+"/"+path, nil)
+		request, err = http.NewRequest(method, connection.Path, nil)
 	} else {
-		request, err = http.NewRequest(method, connection.Host+"/"+path, bytes.NewBuffer(body))
+		request, err = http.NewRequest(method, connection.Path, bytes.NewBuffer(body))
 	}
 
 	if err != nil {
@@ -130,16 +127,16 @@ func (connection Connection) CreateHTTPRequest(method, path string,
 // Body suitable for parsing and applicable to Connection.Output. The HTTP
 // Response Body will be deserialised to Connection.Output, and the method will
 // return the HTTP status code.
-func (connection Connection) ExecuteHTTPRequest(method, path string,
-	body []byte, headers map[string]string) (int, error) {
+func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
+	headers map[string]string) (int, error) {
 
 	client := &http.Client{}
 
-	request, err := connection.CreateHTTPRequest(method, path, body, headers)
+	request, err := connection.createHTTPRequest(method, body, headers)
 	if err != nil {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
+				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
 
 			return statusCode, err
 		}
@@ -150,7 +147,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	if err != nil {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
+				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
 
 			return statusCode, err
 		}
@@ -161,7 +158,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	if resp.StatusCode == 404 {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
+				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
 
 			return statusCode, err
 		}
@@ -169,7 +166,7 @@ func (connection Connection) ExecuteHTTPRequest(method, path string,
 	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, path, body, headers)
+				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
 
 			return statusCode, err
 		}
