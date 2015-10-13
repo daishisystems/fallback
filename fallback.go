@@ -20,8 +20,6 @@ import (
 // which defines the prerequisites that implementations must adhere to in order
 // to take part in the chain.
 type Connecter interface {
-	GetName() string
-
 	ExecuteHTTPRequest(method string, body []byte,
 		headers map[string]string) (int, error)
 }
@@ -58,13 +56,6 @@ func NewConnection(name, path string, output interface{},
 	customError interface{}, fallback Connecter) *Connection {
 
 	return &Connection{name, path, output, customError, fallback}
-}
-
-// GetName returns the Connection name. This method is useful for logging HTTP
-// requests in the chain.
-func (connection Connection) GetName() string {
-
-	return connection.Name
 }
 
 // CreateHTTPRequest instantiates a http.Request. method refers to the HTTP
