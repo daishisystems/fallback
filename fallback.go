@@ -155,15 +155,7 @@ func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		if connection.Fallback != nil {
-			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
-
-			return statusCode, err
-		}
-		return 404, nil
-	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
@@ -174,17 +166,17 @@ func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
 		dec := json.NewDecoder(resp.Body)
 		err := dec.Decode(connection.CustomError)
 		if err != nil {
-			return resp.StatusCode, errors.New("Unable to parse custom error.")
-		}
-
-		return resp.StatusCode, nil
-	} else {
-		dec := json.NewDecoder(resp.Body)
-		err := dec.Decode(connection.Output)
-		if err != nil {
-			return resp.StatusCode, errors.New("Unable to parse custom error.")
+			return resp.StatusCode, errors.New("Unable to parse HTTP Response body.")
 		}
 
 		return resp.StatusCode, nil
 	}
+
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(connection.Output)
+	if err != nil {
+		return resp.StatusCode, errors.New("Unable to parse HTTP Response body.")
+	}
+
+	return resp.StatusCode, nil
 }
