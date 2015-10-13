@@ -42,3 +42,35 @@ func TestSingleHTTPRequest(t *testing.T) {
 			"got", basicResponse.Text, basicResponse.Detail)
 	}
 }
+
+func TestSimpleFallback(t *testing.T) {
+
+	basicResponse := &BasicResponse{}
+	basicError := &BasicError{}
+
+	working := NewConnection("PASS", "http://demo7227109.mockable.io/get-basic",
+		basicResponse, basicError, nil)
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	failing := NewConnection("FAIL", "http://demo7227109.mockable.io/fail-basic",
+		basicResponse, basicError, working)
+	statusCode, err := failing.ExecuteHTTPRequest("GET", nil, headers)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if statusCode != 200 {
+		t.Fatal("For", "Basic GET",
+			"expected", 200,
+			"got", statusCode)
+	}
+
+	if basicResponse.Text != "OK" || basicResponse.Detail != "Successful HTTP request" {
+		t.Error("For", "Basic GET",
+			"expected", "OK, Successful HTTP request",
+			"got", basicResponse.Text, basicResponse.Detail)
+	}
+}
