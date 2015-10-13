@@ -19,12 +19,15 @@ func TestSingleHTTPRequest(t *testing.T) {
 	basicResponse := &BasicResponse{}
 	basicError := &BasicError{}
 
-	conn := NewConnection("HTTP", "http://demo7227109.mockable.io/get-basic", basicResponse, basicError, nil)
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
 
-	statusCode, err := conn.ExecuteHTTPRequest("GET", nil, headers)
+	conn := NewConnection("HTTP", "GET",
+		"http://demo7227109.mockable.io/get-basic", nil, headers,
+		basicResponse, basicError, nil)
+
+	statusCode, err := conn.ExecuteHTTPRequest()
 
 	if err != nil {
 		t.Fatal(err)
@@ -48,17 +51,22 @@ func TestSimpleFallback(t *testing.T) {
 	basicResponse := &BasicResponse{}
 	basicError := &BasicError{}
 
-	working := NewConnection("PASS", "http://demo7227109.mockable.io/get-basic",
-		basicResponse, basicError, nil)
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
 
-	failing := NewConnection("FAIL", "http://demo7227109.mockable.io/fail-basic",
+	working := NewConnection("Working", "GET",
+		"http://demo7227109.mockable.io/get-basic", nil, headers,
+		basicResponse, basicError, nil)
+
+	failing := NewConnection("Failing", "GET",
+		"http://demo7227109.mockable.io/fail-basic", nil, headers,
 		basicResponse, basicError, working)
-	statusCode, err := failing.ExecuteHTTPRequest("GET", nil, headers)
+
+	statusCode, err := failing.ExecuteHTTPRequest()
 
 	if err != nil {
+		t.Log("HTTP status code:", statusCode)
 		t.Fatal(err)
 	}
 

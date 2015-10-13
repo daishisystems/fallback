@@ -20,8 +20,7 @@ import (
 // which defines the prerequisites that implementations must adhere to in order
 // to take part in the chain.
 type Connecter interface {
-	ExecuteHTTPRequest(method string, body []byte,
-		headers map[string]string) (int, error)
+	ExecuteHTTPRequest() (int, error)
 }
 
 // Connection represents a Concrete Handler implementation in the Chain of
@@ -29,22 +28,31 @@ type Connecter interface {
 // Consuming clients can utilise this class directly, or provide custom
 // implementations derived from Connecter.
 //
-// Name: The name used to describe the Connection.
+// Name: The name used to describe the Connection
+//
+// Method: The HTTP Verb (GET, POST, PUT, etc.)
 //
 // Path: The HTTP URI
 //
+// Body: The HTTP request Body
+//
+// Headers: The HTTP request Headers
+//
 // Output: A custom struct that represents a deserialised object returned as
-// result of a successful HTTP request.
+// result of a successful HTTP request
 //
 // CustomError: A custom struct that represents a deserialised object returned
-// as result of an unsuccessful HTTP request.
+// as result of an unsuccessful HTTP request
 //
 // Fallback: The next link in the Chain of Responsibility. Fallback represents
 // an underlying HTTP request that will be invoked in the event failure during
-// execution of this HTTP request.
+// execution of this HTTP request
 type Connection struct {
 	Name        string
+	Method      string
 	Path        string
+	Body        []byte
+	Headers     map[string]string
 	Output      interface{}
 	CustomError interface{}
 	Fallback    Connecter
@@ -52,41 +60,43 @@ type Connection struct {
 
 // NewConnection returns a new Connection instance based on the supplied
 // metadata pertaining to Connection.
-func NewConnection(name, path string, output interface{},
-	customError interface{}, fallback Connecter) *Connection {
+func NewConnection(name, method, path string, body []byte,
+	headers map[string]string, output interface{}, customError interface{},
+	fallback Connecter) *Connection {
 
-	return &Connection{name, path, output, customError, fallback}
+	return &Connection{
+		name,
+		method,
+		path,
+		body,
+		headers,
+		output,
+		customError,
+		fallback,
+	}
 }
 
-// CreateHTTPRequest instantiates a http.Request. method refers to the HTTP
-// method; e.g., POST, GET, etc.
-//
-// path refers to the HTTP URI.
-//
-// body encapsulates the POST body, if applicable.
-//
-// headers refers to any HTTP headers applicable to the HTTP request.
-//
+// CreateHTTPRequest instantiates a http.Request based on connection metadata.
 // The method returns a pointer to the constructed http.Request, or an error,
 // if the URL is invalid.
-func (connection Connection) createHTTPRequest(method string, body []byte,
-	headers map[string]string) (*http.Request, error) {
+func (connection Connection) createHTTPRequest() (*http.Request, error) {
 
 	var request *http.Request
 	var err error
 
-	if body == nil {
-		request, err = http.NewRequest(method, connection.Path, nil)
+	if connection.Body == nil {
+		request, err = http.NewRequest(connection.Method, connection.Path, nil)
 	} else {
-		request, err = http.NewRequest(method, connection.Path, bytes.NewBuffer(body))
+		request, err = http.NewRequest(connection.Method, connection.Path,
+			bytes.NewBuffer(connection.Body))
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	for key := range headers {
-		request.Header.Add(key, headers[key])
+	for key := range connection.Headers {
+		request.Header.Add(key, connection.Headers[key])
 	}
 	return request, nil
 }
@@ -119,16 +129,15 @@ func (connection Connection) createHTTPRequest(method string, body []byte,
 // is established, or all attempts fail. If the HTTP Response Body is not set,
 // or cannot be deserialised to Connection.CustomError, an error is returned
 // along with the HTTP status code.
-func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
-	headers map[string]string) (int, error) {
+func (connection Connection) ExecuteHTTPRequest() (int, error) {
 
 	client := &http.Client{}
 
-	request, err := connection.createHTTPRequest(method, body, headers)
+	request, err := connection.createHTTPRequest()
 	if err != nil {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
+				connection.Fallback.ExecuteHTTPRequest()
 
 			return statusCode, err
 		}
@@ -139,7 +148,7 @@ func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
 	if err != nil {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
+				connection.Fallback.ExecuteHTTPRequest()
 
 			return statusCode, err
 		}
@@ -150,7 +159,7 @@ func (connection Connection) ExecuteHTTPRequest(method string, body []byte,
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		if connection.Fallback != nil {
 			statusCode, err :=
-				connection.Fallback.ExecuteHTTPRequest(method, body, headers)
+				connection.Fallback.ExecuteHTTPRequest()
 
 			return statusCode, err
 		}
