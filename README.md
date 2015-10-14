@@ -9,6 +9,52 @@ Any number of fallback HTTP requests can be chained sequentially. Redundancy is 
 ![Icon](https://dl.dropboxusercontent.com/u/26042707/Fallback_XS.jpg)
 ## Installation
 go get github.com/daishisystems/fallback
+## Sample Code
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/daishisystems/fallback"
+)
+
+func main() {
+
+	type BasicResponse struct {
+		Text   string
+		Detail string
+	}
+
+	type BasicError struct {
+		Code    int
+		Message string
+	}
+
+	basicResponse := &BasicResponse{}
+	basicError := &BasicError{}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	working := fallback.NewConnection("Working", "GET",
+		"http://demo7227109.mockable.io/get-basic", nil, headers,
+		basicResponse, basicError, nil)
+
+	failing := fallback.NewConnection("Failing", "GET",
+		"http://demo7227109.mockable.io/fail-basic", nil, headers,
+		basicResponse, basicError, working)
+
+	statusCode, err := failing.ExecuteHTTPRequest()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("HTTP status code: %d\n", statusCode)
+	fmt.Printf("Text: %s\n", basicResponse.Text)
+	fmt.Printf("Detail: %s", basicResponse.Detail)
+}
+```
 ## Contact the Developer
 Please reach out and contact me for questions, suggestions, or to just talk tech in general.
 
