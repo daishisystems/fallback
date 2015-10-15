@@ -121,3 +121,29 @@ func TestComplexFallback(t *testing.T) {
 			"got", basicResponse.Text, basicResponse.Detail)
 	}
 }
+
+func TestFallbackBuilder(t *testing.T) {
+
+	path := "http://demo7227109.mockable.io/get-basic"
+
+	basicResponse := &BasicResponse{}
+	basicError := &BasicError{}
+
+	builder := ConnectionBuilder{}
+	connectionManager := ConnectionManager{&builder}
+
+	connectionManager.CreateConnection("CONN1", "GET", path, nil, nil,
+		basicResponse, basicError, nil)
+
+	statusCode, err := builder.Connection.ExecuteHTTPRequest()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if statusCode != 200 {
+		t.Fatal("For", "Basic GET",
+			"expected", 200,
+			"got", statusCode)
+	}
+}
