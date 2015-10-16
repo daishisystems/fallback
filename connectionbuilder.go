@@ -5,7 +5,7 @@ import (
 )
 
 type connectionBuilder interface {
-	createConnection(name, method, path string) *Connection
+	createConnection(name, method, path string, returnsJSON bool) *Connection
 	addHTTPPOSTBody(body interface{}) error
 	addHTTPHeaders(headers map[string]string)
 	addPayloads(output interface{}, customError interface{})
@@ -17,12 +17,18 @@ type ConnectionBuilder struct {
 }
 
 func (builder *ConnectionBuilder) createConnection(name, method,
-	path string) {
+	path string, returnsJSON bool) {
 
 	builder.Connection = &Connection{
 		Name:   name,
 		Method: method,
 		Path:   path,
+	}
+
+	if returnsJSON {
+		builder.Connection.Headers = map[string]string{
+			"Content-Type": "application/json",
+		}
 	}
 }
 
@@ -39,13 +45,7 @@ func (builder *ConnectionBuilder) addHTTPPOSTBody(body interface{}) error {
 
 func (builder *ConnectionBuilder) addHTTPHeaders(headers map[string]string) {
 
-	if headers == nil {
-		builder.Connection.Headers = map[string]string{
-			"Content-Type": "application/json",
-		}
-	} else {
-		builder.Connection.Headers = headers
-	}
+	builder.Connection.Headers = headers
 }
 
 func (builder *ConnectionBuilder) addPayloads(output interface{},
@@ -65,10 +65,11 @@ type ConnectionManager struct {
 }
 
 func (manager *ConnectionManager) CreateConnection(
-	name, method, path string, body interface{}, headers map[string]string,
-	output interface{}, customError interface{}, fallback Connecter) {
+	name, method, path string, returnsJSON bool, body interface{},
+	headers map[string]string, output interface{}, customError interface{},
+	fallback Connecter) {
 
-	manager.builder.createConnection(name, method, path)
+	manager.builder.createConnection(name, method, path, returnsJSON)
 
 	if body != nil {
 		manager.builder.addHTTPPOSTBody(body)

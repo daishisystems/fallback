@@ -39,7 +39,8 @@ func TestSingleHTTPRequest(t *testing.T) {
 			"got", statusCode)
 	}
 
-	if basicResponse.Text != "OK" || basicResponse.Detail != "Successful HTTP request" {
+	if basicResponse.Text != "OK" ||
+		basicResponse.Detail != "Successful HTTP request" {
 		t.Error("For", "Basic GET",
 			"expected", "OK, Successful HTTP request",
 			"got", basicResponse.Text, basicResponse.Detail)
@@ -75,7 +76,8 @@ func TestSimpleFallback(t *testing.T) {
 			"got", statusCode)
 	}
 
-	if basicResponse.Text != "OK" || basicResponse.Detail != "Successful HTTP request" {
+	if basicResponse.Text != "OK" ||
+		basicResponse.Detail != "Successful HTTP request" {
 		t.Error("For", "Basic GET",
 			"expected", "OK, Successful HTTP request",
 			"got", basicResponse.Text, basicResponse.Detail)
@@ -115,7 +117,8 @@ func TestComplexFallback(t *testing.T) {
 			"got", statusCode)
 	}
 
-	if basicResponse.Text != "OK" || basicResponse.Detail != "Successful HTTP request" {
+	if basicResponse.Text != "OK" ||
+		basicResponse.Detail != "Successful HTTP request" {
 		t.Error("For", "Basic GET",
 			"expected", "OK, Successful HTTP request",
 			"got", basicResponse.Text, basicResponse.Detail)
@@ -126,14 +129,14 @@ func TestFallbackBuilder(t *testing.T) {
 
 	path := "http://demo7227109.mockable.io/get-basic"
 
-	basicResponse := &BasicResponse{}
-	basicError := &BasicError{}
+	basicResponse := BasicResponse{}
+	basicError := BasicError{}
 
 	builder := ConnectionBuilder{}
 	connectionManager := ConnectionManager{&builder}
 
-	connectionManager.CreateConnection("CONN1", "GET", path, nil, nil,
-		basicResponse, basicError, nil)
+	connectionManager.CreateConnection("CONN1", "GET", path, true, nil, nil,
+		&basicResponse, &basicError, nil)
 
 	statusCode, err := builder.Connection.ExecuteHTTPRequest()
 
@@ -145,5 +148,12 @@ func TestFallbackBuilder(t *testing.T) {
 		t.Fatal("For", "Basic GET",
 			"expected", 200,
 			"got", statusCode)
+	}
+
+	if basicResponse.Text != "OK" ||
+		basicResponse.Detail != "Successful HTTP request" {
+		t.Error("For", "Basic GET",
+			"expected", "OK, Successful HTTP request",
+			"got", basicResponse.Text, basicResponse.Detail)
 	}
 }
