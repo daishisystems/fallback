@@ -132,11 +132,11 @@ func TestFallbackBuilder(t *testing.T) {
 	basicResponse := BasicResponse{}
 	basicError := BasicError{}
 
-	builder := ConnectionBuilder{}
-	connectionManager := ConnectionManager{&builder}
-
-	connectionManager.CreateConnection("CONN1", "GET", path, true, nil, nil,
+	builder := NewConnectionBuilder("CONN1", "GET", path, true, nil, nil,
 		&basicResponse, &basicError, nil)
+
+	connectionManager := ConnectionManager{}
+	connectionManager.CreateConnection(builder)
 
 	statusCode, err := builder.Connection.ExecuteHTTPRequest()
 

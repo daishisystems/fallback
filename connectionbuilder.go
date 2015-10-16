@@ -5,36 +5,58 @@ import (
 )
 
 type connectionBuilder interface {
-	createConnection(name, method, path string, returnsJSON bool) *Connection
-	addHTTPPOSTBody(body interface{}) error
-	addHTTPHeaders(headers map[string]string)
-	addPayloads(output interface{}, customError interface{})
-	addFallback(fallback Connecter)
+	createConnection()
+	addHTTPPOSTBody() error
+	addHTTPHeaders()
+	addPayloads()
+	addFallback()
 }
 
 type ConnectionBuilder struct {
+	name, method, path        string
+	returnsJSON               bool
+	body, output, customError interface{}
+	headers                   map[string]string
+	fallback                  Connecter
+
 	Connection *Connection
 }
 
-func (builder *ConnectionBuilder) createConnection(name, method,
-	path string, returnsJSON bool) {
+func NewConnectionBuilder(name, method, path string, returnsJSON bool, body interface{},
+	headers map[string]string, output interface{}, customError interface{},
+	fallback Connecter) *ConnectionBuilder {
+
+	return &ConnectionBuilder{
+		name:        name,
+		method:      method,
+		path:        path,
+		returnsJSON: returnsJSON,
+		body:        body,
+		output:      output,
+		customError: customError,
+		headers:     headers,
+		fallback:    fallback,
+	}
+}
+
+func (builder *ConnectionBuilder) createConnection() {
 
 	builder.Connection = &Connection{
-		Name:   name,
-		Method: method,
-		Path:   path,
+		Name:   builder.name,
+		Method: builder.method,
+		Path:   builder.path,
 	}
 
-	if returnsJSON {
+	if builder.returnsJSON {
 		builder.Connection.Headers = map[string]string{
 			"Content-Type": "application/json",
 		}
 	}
 }
 
-func (builder *ConnectionBuilder) addHTTPPOSTBody(body interface{}) error {
+func (builder *ConnectionBuilder) addHTTPPOSTBody() error {
 
-	marshaled, err := json.Marshal(body)
+	marshaled, err := json.Marshal(builder.body)
 	if err != nil {
 		return err
 	}
@@ -43,42 +65,36 @@ func (builder *ConnectionBuilder) addHTTPPOSTBody(body interface{}) error {
 	return nil
 }
 
-func (builder *ConnectionBuilder) addHTTPHeaders(headers map[string]string) {
+func (builder *ConnectionBuilder) addHTTPHeaders() {
 
-	builder.Connection.Headers = headers
+	builder.Connection.Headers = builder.headers
 }
 
-func (builder *ConnectionBuilder) addPayloads(output interface{},
-	customError interface{}) {
+func (builder *ConnectionBuilder) addPayloads() {
 
-	builder.Connection.Output = output
-	builder.Connection.CustomError = customError
+	builder.Connection.Output = builder.output
+	builder.Connection.CustomError = builder.customError
 }
 
-func (builder *ConnectionBuilder) addFallback(fallback Connecter) {
+func (builder *ConnectionBuilder) addFallback() {
 
-	builder.Connection.Fallback = fallback
+	builder.Connection.Fallback = builder.fallback
 }
 
-type ConnectionManager struct {
-	builder *ConnectionBuilder
-}
+type ConnectionManager struct{}
 
-func (manager *ConnectionManager) CreateConnection(
-	name, method, path string, returnsJSON bool, body interface{},
-	headers map[string]string, output interface{}, customError interface{},
-	fallback Connecter) {
+func (manager *ConnectionManager) CreateConnection(builder *ConnectionBuilder) {
 
-	manager.builder.createConnection(name, method, path, returnsJSON)
+	builder.createConnection()
 
-	if body != nil {
-		manager.builder.addHTTPPOSTBody(body)
+	if builder.body != nil {
+		builder.addHTTPPOSTBody()
 	}
 
-	manager.builder.addHTTPHeaders(headers)
-	manager.builder.addPayloads(output, customError)
+	builder.addHTTPHeaders()
+	builder.addPayloads()
 
-	if fallback != nil {
-		manager.builder.addFallback(fallback)
+	if builder.fallback != nil {
+		builder.addFallback()
 	}
 }
