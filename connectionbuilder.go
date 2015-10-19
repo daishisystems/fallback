@@ -12,6 +12,8 @@ type connectionBuilder interface {
 	addFallback()
 }
 
+// ConnectionBuilder represents a Builder-pattern based means of constructing
+// Connection instances.
 type ConnectionBuilder struct {
 	name, method, path        string
 	returnsJSON               bool
@@ -22,6 +24,8 @@ type ConnectionBuilder struct {
 	Connection *Connection
 }
 
+// NewConnectionBuilder returns a new ConnectionBuilder instance based on the
+// specified metadata pertaining to ConnectionBuilder.
 func NewConnectionBuilder(name, method, path string, returnsJSON bool,
 	body interface{}, headers map[string]string, output interface{},
 	customError interface{}, fallback Connecter) *ConnectionBuilder {
@@ -87,8 +91,14 @@ func (builder *ConnectionBuilder) addFallback() {
 	builder.Connection.Fallback = builder.fallback
 }
 
+// ConnectionManager represents the Director structure that applies to
+// ConnectionBuilder when creating Connection instances.
 type ConnectionManager struct{}
 
+// CreateConnection represents the constructor method that applies to
+// ConnectionBuilder when creating Connection instances. It invokes each
+// relevant construction method on builder in order to yield a complete
+// Connection instance.
 func (manager *ConnectionManager) CreateConnection(builder *ConnectionBuilder) {
 
 	builder.createConnection()
