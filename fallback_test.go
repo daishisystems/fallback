@@ -1,8 +1,6 @@
 package fallback
 
-import (
-	"testing"
-)
+import "testing"
 
 type BasicResponse struct {
 	Text   string
@@ -139,6 +137,49 @@ func TestFallbackBuilder(t *testing.T) {
 	connectionManager.CreateConnection(builder)
 
 	statusCode, err := builder.Connection.ExecuteHTTPRequest()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if statusCode != 200 {
+		t.Fatal("For", "Basic GET",
+			"expected", 200,
+			"got", statusCode)
+	}
+
+	if basicResponse.Text != "OK" ||
+		basicResponse.Detail != "Successful HTTP request" {
+		t.Error("For", "Basic GET",
+			"expected", "OK, Successful HTTP request",
+			"got", basicResponse.Text, basicResponse.Detail)
+	}
+}
+
+func TestComplexFallbackBuilder(t *testing.T) {
+
+	passPath := "http://demo7227109.mockable.io/get-basic"
+	failPath2 := "http://demo7227109.mockable.io/fail-basic"
+	failPath1 := "http://demo7227109.mockable.io/fail-basic-post"
+
+	basicResponse := BasicResponse{}
+	basicError := BasicError{}
+
+	connectionManager := ConnectionManager{}
+
+	passBuilder := NewConnectionBuilder("PASS", "GET", passPath, true, nil, nil,
+		&basicResponse, &basicError, nil)
+	connectionManager.CreateConnection(passBuilder)
+
+	failBuilder2 := NewConnectionBuilder("FAIL2", "POST", failPath2, true, nil, nil,
+		&basicResponse, &basicError, passBuilder.Connection)
+	connectionManager.CreateConnection(failBuilder2)
+
+	failBuilder1 := NewConnectionBuilder("FAIL1", "POST", failPath1, true, nil, nil,
+		&basicResponse, &basicError, failBuilder2.Connection)
+	connectionManager.CreateConnection(failBuilder1)
+
+	statusCode, err := failBuilder1.Connection.ExecuteHTTPRequest()
 
 	if err != nil {
 		t.Fatal(err)

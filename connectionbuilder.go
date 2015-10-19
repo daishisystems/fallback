@@ -22,9 +22,9 @@ type ConnectionBuilder struct {
 	Connection *Connection
 }
 
-func NewConnectionBuilder(name, method, path string, returnsJSON bool, body interface{},
-	headers map[string]string, output interface{}, customError interface{},
-	fallback Connecter) *ConnectionBuilder {
+func NewConnectionBuilder(name, method, path string, returnsJSON bool,
+	body interface{}, headers map[string]string, output interface{},
+	customError interface{}, fallback Connecter) *ConnectionBuilder {
 
 	return &ConnectionBuilder{
 		name:        name,
@@ -56,18 +56,24 @@ func (builder *ConnectionBuilder) createConnection() {
 
 func (builder *ConnectionBuilder) addHTTPPOSTBody() error {
 
-	marshaled, err := json.Marshal(builder.body)
+	body, err := json.Marshal(builder.body)
 	if err != nil {
 		return err
 	}
 
-	builder.Connection.Body = marshaled
+	builder.Connection.Body = body
 	return nil
 }
 
 func (builder *ConnectionBuilder) addHTTPHeaders() {
 
-	builder.Connection.Headers = builder.headers
+	if builder.Connection.Headers != nil {
+		for header, value := range builder.headers {
+			builder.Connection.Headers[header] = value
+		}
+	} else {
+		builder.Connection.Headers = builder.headers
+	}
 }
 
 func (builder *ConnectionBuilder) addPayloads() {
