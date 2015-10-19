@@ -21,32 +21,59 @@ import (
 
 func main() {
 
+	// BasicResponse represents the response issued from the first successful
+	// HTTP request, if applicable.
 	type BasicResponse struct {
 		Text   string
 		Detail string
 	}
 
+	// BasicError represents the error issued from the last unsuccessful
+	// HTTP request, if applicable.
 	type BasicError struct {
 		Code    int
 		Message string
 	}
 
+	//
+	type PostBody struct {
+		Name   string
+		Amount int
+	}
+
 	basicResponse := &BasicResponse{}
 	basicError := &BasicError{}
 
-	headers := map[string]string{
-		"Content-Type": "application/json",
+	postBody := PostBody{
+		"Random", 100,
 	}
 
-	working := fallback.NewConnection("Working", "GET",
-		"http://demo7227109.mockable.io/get-basic", nil, headers,
-		basicResponse, basicError, nil)
+	passPath := "http://demo7227109.mockable.io/get-basic"
+	failPath2 := "http://demo7227109.mockable.io/fail-basic"
+	failPath1 := "http://demo7227109.mockable.io/fail-basic-post"
 
-	failing := fallback.NewConnection("Failing", "GET",
-		"http://demo7227109.mockable.io/fail-basic", nil, headers,
-		basicResponse, basicError, working)
+	connectionManager := fallback.ConnectionManager{}
 
-	statusCode, err := failing.ExecuteHTTPRequest()
+	// This Connection will execute last, and will succeed.
+	passBuilder := fallback.NewConnectionBuilder("PASS", "GET", passPath, true,
+		nil, nil, &basicResponse, &basicError, nil)
+	connectionManager.CreateConnection(passBuilder)
+
+	// This Connection will be the 2nd Connection to execute, and will fail.
+	failBuilder2 := fallback.NewConnectionBuilder("FAIL2", "POST", failPath2,
+		true, nil, nil, &basicResponse, &basicError, passBuilder.Connection)
+	connectionManager.CreateConnection(failBuilder2)
+
+	//This Connection will be the 1st Connection to execute, and will fail.
+	failBuilder1 := fallback.NewConnectionBuilder("FAIL1", "POST", failPath1,
+		true, postBody, nil, &basicResponse, &basicError,
+		failBuilder2.Connection)
+	connectionManager.CreateConnection(failBuilder1)
+
+	// Each Connection will be invoked in a recursive manner until a
+	// Connection succeeds, or all Connections fail. Please refer to the Chain
+	// of Responsibility design for more information.
+	statusCode, err := failBuilder1.Connection.ExecuteHTTPRequest()
 	if err != nil {
 		panic(err)
 	}

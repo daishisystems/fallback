@@ -167,16 +167,16 @@ func TestComplexFallbackBuilder(t *testing.T) {
 
 	connectionManager := ConnectionManager{}
 
-	passBuilder := NewConnectionBuilder("PASS", "GET", passPath, true, nil, nil,
-		&basicResponse, &basicError, nil)
+	passBuilder := NewConnectionBuilder("PASS", "GET", passPath, true, nil,
+		nil, &basicResponse, &basicError, nil)
 	connectionManager.CreateConnection(passBuilder)
 
-	failBuilder2 := NewConnectionBuilder("FAIL2", "POST", failPath2, true, nil, nil,
-		&basicResponse, &basicError, passBuilder.Connection)
+	failBuilder2 := NewConnectionBuilder("FAIL2", "POST", failPath2, true, nil,
+		nil, &basicResponse, &basicError, passBuilder.Connection)
 	connectionManager.CreateConnection(failBuilder2)
 
-	failBuilder1 := NewConnectionBuilder("FAIL1", "POST", failPath1, true, nil, nil,
-		&basicResponse, &basicError, failBuilder2.Connection)
+	failBuilder1 := NewConnectionBuilder("FAIL1", "POST", failPath1, true, nil,
+		nil, &basicResponse, &basicError, failBuilder2.Connection)
 	connectionManager.CreateConnection(failBuilder1)
 
 	statusCode, err := failBuilder1.Connection.ExecuteHTTPRequest()
