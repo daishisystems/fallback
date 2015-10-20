@@ -27,7 +27,7 @@ type ConnectionBuilder struct {
 // NewConnectionBuilder returns a new ConnectionBuilder instance based on the
 // specified metadata pertaining to ConnectionBuilder.
 func NewConnectionBuilder(name, method, path string, returnsJSON bool,
-	body interface{}, headers map[string]string, output interface{},
+	body interface{}, headers map[string]string, output,
 	customError interface{}, fallback Connecter) *ConnectionBuilder {
 
 	return &ConnectionBuilder{

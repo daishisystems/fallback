@@ -63,7 +63,7 @@ type Connection struct {
 // NewConnection returns a new Connection instance based on the specified
 // metadata pertaining to Connection.
 func NewConnection(name, method, path string, body []byte,
-	headers map[string]string, output interface{}, customError interface{},
+	headers map[string]string, output, customError interface{},
 	fallback Connecter) *Connection {
 
 	return &Connection{
@@ -132,7 +132,6 @@ func (connection Connection) createHTTPRequest() (*http.Request, error) {
 // or cannot be deserialised to Connection.CustomError, an error is returned
 // along with the HTTP status code.
 func (connection Connection) ExecuteHTTPRequest() (int, error) {
-
 	client := &http.Client{}
 
 	request, err := connection.createHTTPRequest()
