@@ -198,3 +198,45 @@ func TestComplexFallbackBuilder(t *testing.T) {
 			"got", basicResponse.Text, basicResponse.Detail)
 	}
 }
+
+type receiver struct {
+	Message string
+}
+
+type logger struct {
+	Receiver *receiver
+}
+
+func (l logger) Log(message string) {
+
+	l.Receiver.Message = message
+}
+
+func TestLogger(t *testing.T) {
+
+	r := receiver{}
+
+	logger := &logger{
+		Receiver: &r,
+	}
+
+	path := "http://demo7227109.mockable.io/fail-basic"
+	connectionManager := ConnectionManager{}
+
+	builder := NewConnectionBuilder("LOGGER", "GET", path, true, nil,
+		nil, nil, nil, nil, logger)
+	connectionManager.CreateConnection(builder)
+
+	statusCode, err := builder.Connection.ExecuteHTTPRequest()
+
+	if statusCode != 400 || err == nil {
+		t.Fatal("HTTP request should have failed. Status Code:", statusCode,
+			"Error:", err)
+	}
+
+	if logger.Receiver.Message != "LOGGER returned HTTP Error: 400" {
+		t.Fatal("For", "LOGGER",
+			"expected", "LOGGER returned HTTP Error: 400",
+			"got", logger.Receiver.Message)
+	}
+}
