@@ -10,6 +10,7 @@ type connectionBuilder interface {
 	addHTTPHeaders()
 	addPayloads()
 	addFallback()
+	addLogger()
 }
 
 // ConnectionBuilder represents a Builder-pattern based means of constructing
@@ -20,6 +21,7 @@ type ConnectionBuilder struct {
 	body, output, customError interface{}
 	headers                   map[string]string
 	fallback                  Connecter
+	logger                    Logger
 
 	Connection *Connection
 }
@@ -27,8 +29,8 @@ type ConnectionBuilder struct {
 // NewConnectionBuilder returns a new ConnectionBuilder instance based on the
 // specified metadata pertaining to ConnectionBuilder.
 func NewConnectionBuilder(name, method, path string, returnsJSON bool,
-	body interface{}, headers map[string]string, output,
-	customError interface{}, fallback Connecter) *ConnectionBuilder {
+	body, output, customError interface{}, headers map[string]string,
+	fallback Connecter, logger Logger) *ConnectionBuilder {
 
 	return &ConnectionBuilder{
 		name:        name,
@@ -40,6 +42,7 @@ func NewConnectionBuilder(name, method, path string, returnsJSON bool,
 		customError: customError,
 		headers:     headers,
 		fallback:    fallback,
+		logger:      logger,
 	}
 }
 
@@ -91,6 +94,11 @@ func (builder *ConnectionBuilder) addFallback() {
 	builder.Connection.Fallback = builder.fallback
 }
 
+func (builder *ConnectionBuilder) addLogger() {
+
+	builder.Connection.Logger = builder.logger
+}
+
 // ConnectionManager represents the Director structure that applies to
 // ConnectionBuilder when creating Connection instances.
 type ConnectionManager struct{}
@@ -112,5 +120,9 @@ func (manager *ConnectionManager) CreateConnection(builder *ConnectionBuilder) {
 
 	if builder.fallback != nil {
 		builder.addFallback()
+	}
+
+	if builder.logger != nil {
+		builder.addLogger()
 	}
 }

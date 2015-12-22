@@ -23,12 +23,12 @@ func TestSingleHTTPRequest(t *testing.T) {
 
 	conn := NewConnection("HTTP", "GET",
 		"http://demo7227109.mockable.io/get-basic", nil, headers,
-		basicResponse, basicError, nil)
+		basicResponse, basicError, nil, nil)
 
 	statusCode, err := conn.ExecuteHTTPRequest()
 
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Status Code:", statusCode, "Error:", err)
 	}
 
 	if statusCode != 200 {
@@ -56,11 +56,11 @@ func TestSimpleFallback(t *testing.T) {
 
 	working := NewConnection("Working", "GET",
 		"http://demo7227109.mockable.io/get-basic", nil, headers,
-		basicResponse, basicError, nil)
+		basicResponse, basicError, nil, nil)
 
 	failing := NewConnection("Failing", "GET",
 		"http://demo7227109.mockable.io/fail-basic", nil, headers,
-		basicResponse, basicError, working)
+		basicResponse, basicError, working, nil)
 
 	statusCode, err := failing.ExecuteHTTPRequest()
 
@@ -93,15 +93,15 @@ func TestComplexFallback(t *testing.T) {
 
 	workingPOST := NewConnection("Working POST", "POST",
 		"http://demo7227109.mockable.io/post-basic", nil, headers,
-		basicResponse, basicError, nil)
+		basicResponse, basicError, nil, nil)
 
 	failingPOST := NewConnection("Failing POST", "POST",
 		"http://demo7227109.mockable.io/fail-basic-post", nil, headers,
-		basicResponse, basicError, workingPOST)
+		basicResponse, basicError, workingPOST, nil)
 
 	failingGet := NewConnection("Failing GET", "GET",
 		"http://demo7227109.mockable.io/fail-basic", nil, headers,
-		basicResponse, basicError, failingPOST)
+		basicResponse, basicError, failingPOST, nil)
 
 	statusCode, err := failingGet.ExecuteHTTPRequest()
 
@@ -130,8 +130,8 @@ func TestFallbackBuilder(t *testing.T) {
 	basicResponse := BasicResponse{}
 	basicError := BasicError{}
 
-	builder := NewConnectionBuilder("CONN1", "GET", path, true, nil, nil,
-		&basicResponse, &basicError, nil)
+	builder := NewConnectionBuilder("CONN1", "GET", path, true, nil,
+		&basicResponse, &basicError, nil, nil, nil)
 
 	connectionManager := ConnectionManager{}
 	connectionManager.CreateConnection(builder)
@@ -168,21 +168,21 @@ func TestComplexFallbackBuilder(t *testing.T) {
 	connectionManager := ConnectionManager{}
 
 	passBuilder := NewConnectionBuilder("PASS", "GET", passPath, true, nil,
-		nil, &basicResponse, &basicError, nil)
+		&basicResponse, &basicError, nil, nil, nil)
 	connectionManager.CreateConnection(passBuilder)
 
 	failBuilder2 := NewConnectionBuilder("FAIL2", "POST", failPath2, true, nil,
-		nil, &basicResponse, &basicError, passBuilder.Connection)
+		&basicResponse, &basicError, nil, passBuilder.Connection, nil)
 	connectionManager.CreateConnection(failBuilder2)
 
 	failBuilder1 := NewConnectionBuilder("FAIL1", "POST", failPath1, true, nil,
-		nil, &basicResponse, &basicError, failBuilder2.Connection)
+		&basicResponse, &basicError, nil, failBuilder2.Connection, nil)
 	connectionManager.CreateConnection(failBuilder1)
 
 	statusCode, err := failBuilder1.Connection.ExecuteHTTPRequest()
 
 	if err != nil {
-		t.Fatal(err)
+		t.Fatal("Status Code:", statusCode, "Error:", err)
 	}
 
 	if statusCode != 200 {

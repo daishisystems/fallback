@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 )
 
 // Connecter represents the Handler abstraction in the Chain of Responsibility
@@ -23,6 +24,15 @@ import (
 // to take part in the chain.
 type Connecter interface {
 	ExecuteHTTPRequest() (int, error)
+}
+
+// Logger represents an abstraction providing custom logging. Clients may apply
+// custom Logger implementations that publish events in the event of any
+// Fallback component failing to execute a HTTP request.
+//
+// Logger expects a successful response and therefore does not return an error.
+type Logger interface {
+	Log(message string)
 }
 
 // Connection represents a Concrete Handler implementation in the Chain of
@@ -49,22 +59,23 @@ type Connecter interface {
 // Fallback: The next link in the Chain of Responsibility. Fallback represents
 // an underlying HTTP request that will be invoked in the event of failure
 // during execution of this HTTP request
+//
+// Logger: Custom Logger implementations that publish events in the event of
+// any Fallback component failing to execute a HTTP request.
 type Connection struct {
-	Name        string
-	Method      string
-	Path        string
-	Body        []byte
-	Headers     map[string]string
-	Output      interface{}
-	CustomError interface{}
-	Fallback    Connecter
+	Name, Method, Path  string
+	Body                []byte
+	Headers             map[string]string
+	Output, CustomError interface{}
+	Fallback            Connecter
+	Logger              Logger
 }
 
 // NewConnection returns a new Connection instance based on the specified
 // metadata pertaining to Connection.
 func NewConnection(name, method, path string, body []byte,
 	headers map[string]string, output, customError interface{},
-	fallback Connecter) *Connection {
+	fallback Connecter, logger Logger) *Connection {
 
 	return &Connection{
 		name,
@@ -75,6 +86,7 @@ func NewConnection(name, method, path string, body []byte,
 		output,
 		customError,
 		fallback,
+		logger,
 	}
 }
 
@@ -132,10 +144,15 @@ func (connection Connection) createHTTPRequest() (*http.Request, error) {
 // or cannot be deserialised to Connection.CustomError, an error is returned
 // along with the HTTP status code.
 func (connection Connection) ExecuteHTTPRequest() (int, error) {
+
 	client := &http.Client{}
 
 	request, err := connection.createHTTPRequest()
 	if err != nil {
+		if connection.Logger != nil {
+			connection.Logger.Log(connection.Name + " failed: " + err.Error())
+		}
+
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest()
@@ -147,6 +164,10 @@ func (connection Connection) ExecuteHTTPRequest() (int, error) {
 
 	resp, err := client.Do(request)
 	if err != nil {
+		if connection.Logger != nil {
+			connection.Logger.Log(connection.Name + " failed: " + err.Error())
+		}
+
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest()
@@ -158,6 +179,12 @@ func (connection Connection) ExecuteHTTPRequest() (int, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		if connection.Logger != nil {
+			connection.Logger.Log(
+				connection.Name + " returned HTTP Error: " +
+					strconv.Itoa(resp.StatusCode))
+		}
+
 		if connection.Fallback != nil {
 			statusCode, err :=
 				connection.Fallback.ExecuteHTTPRequest()
@@ -168,7 +195,8 @@ func (connection Connection) ExecuteHTTPRequest() (int, error) {
 		dec := json.NewDecoder(resp.Body)
 		err := dec.Decode(connection.CustomError)
 		if err != nil {
-			return resp.StatusCode, errors.New("Unable to parse HTTP Response body.")
+			return resp.StatusCode,
+				errors.New("Unable to parse HTTP Response body.")
 		}
 
 		return resp.StatusCode, nil
